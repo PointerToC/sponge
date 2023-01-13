@@ -12,14 +12,15 @@
 class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
-    size_t _eof = false;
+    size_t _eof_signal = false;
+    size_t _eof_index = 0;
     size_t _unorder_num = 0;
     size_t _cursor = 0;
     size_t _window_len = 0;
     std::map<size_t,std::string> _memo{};
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
-    bool _is_overlap(const size_t& index,const size_t &strlen) const;
+    void insert_str(const size_t& index,const std::string& str);
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,

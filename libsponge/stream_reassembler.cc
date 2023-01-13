@@ -21,66 +21,85 @@ StreamReassembler::StreamReassembler(const size_t capacity) : _output(capacity),
 //! contiguous substrings and writes them into the output stream in order.
 void StreamReassembler::push_substring(const string &data, const size_t index, const bool eof) {
     DUMMY_CODE(data, index, eof);
-    size_t strlen = data.size();
+    this->_window_len = this->_capacity - this->_output.buffer_size();
+    size_t idx = index;
+    size_t left = 0;
+    size_t len = data.size();
+    // if data is already written into output,return
+    if (index + data.size() < this->_cursor) {
+        return;
+    }
+    // data is overlaped with the cursor
+    if (index < this->_cursor && this->_cursor < index + data.size()) {
+        left = this->_cursor - index;
+        idx = this->_cursor;
+        len -= left;
+    }
+    // length of data is execced the 'this->_window_len'
+    if (index + data.size() > this->_cursor + this->_window_len) {
+        len -= ((index + data.size()) - (this->_cursor + this->_window_len));
+    }
+    string str = data.substr(left, len);
+    this->insert_str(idx, str);
 
+    // erase overlapping
+    std::string assem_str;
+    std::map<size_t, std::string>::iterator iter = this->_memo.begin();
+    while (iter->first == this->_cursor && iter != this->_memo.end()) {
+        assem_str += iter->second;
+        this->_cursor += iter->second.size();
+        iter = next(iter);
+        this->_memo.erase(prev(iter));
+    }
+    // count unreassemable data bytes
+    if (assem_str.empty() == false) {
+        this->_output.write(assem_str);
+    }
+    this->_unorder_num = 0;
+    for (auto a = this->_memo.begin(); a != this->_memo.end(); ++a) {
+        this->_unorder_num += a->second.size();
+    }
+    this->_window_len = this->_capacity - this->_output.buffer_size();
+    // eof procedure
     if (eof == true) {
+        this->_eof_index = index + data.size();
+        this->_eof_signal = true;
+    }
+    if (this->_eof_signal == true && this->_eof_index == this->_cursor) {
         this->_output.end_input();
     }
-
-    if (strlen + this->_output.buffer_size() + this->_unorder_num > this->_capacity) {
-        return;
-    }
-
-    this->_window_len = this->_capacity - this->_output.buffer_size();
-
-    if (this->_memo.count(index) || index + strlen > this->_cursor + this->_window_len) {
-        return;
-    }
-
-    if (this->_cursor == index) {
-        string assem_str = data;
-        size_t cnt = 0;
-        size_t next_idx = index + strlen;
-        while (this->_memo.count(next_idx)) {
-            size_t l = this->_memo[next_idx].size();
-            assem_str += this->_memo[next_idx];
-            this->_memo.erase(next_idx);
-            cnt += l;
-            next_idx += l;
-        }
-        this->_cursor = next_idx;
-        this->_unorder_num -= cnt;
-        this->_output.write(assem_str);
-        this->_window_len = this->_capacity - this->_output.buffer_size();
-    } else if (this->_cursor < index) {
-        this->_memo.insert(std::make_pair(index, data));
-        this->_unorder_num += data.size();
-    } else if (this->_cursor > index) {
-        size_t gap = this->_cursor - index;
-
-    }
+    return;
 }
 
-// bool StreamReassembler::_is_overlap(const size_t &index, const size_t &strlen) const {
-//     auto iter = this->_memo.lower_bound(index);
-//     if (iter != this->_memo.end()) {
-//         size_t start = iter->first;
-//         size_t end = iter->first + iter->second.size();
-//         if ((start <= index && index < end) || (start <= index + strlen && index + strlen < end) ||
-//             (index < start && end <= index + strlen)) {
-//             return true;
-//         }
-//     }
-//     if (!this->_memo.empty() && iter != this->_memo.begin()) {
-//         --iter;
-//         size_t start = iter->first;
-//         size_t end = iter->first + iter->second.size();
-//         if (start < index && index < start + end) {
-//             return true;
-//         }
-//     }
-//     return false;
-// }
+void StreamReassembler::insert_str(const size_t &index, const std::string &str) {
+    if (this->_memo.count(index)) {
+        this->_memo[index] = this->_memo[index].size() > str.size() ? this->_memo[index] : str;
+    } else {
+        this->_memo.insert(std::make_pair(index, str));
+    }
+    map<size_t, std::string>::iterator iter = this->_memo.find(index);
+    auto next_iter = next(iter);
+    while (next_iter != this->_memo.end() && iter->first + iter->second.size() >= next_iter->first) {
+        size_t diff = iter->first + iter->second.size() - next_iter->first;
+        if (diff < next_iter->second.size()) {
+            iter->second += next_iter->second.substr(diff);
+        }
+        this->_memo.erase(next_iter);
+        next_iter = next(iter);
+    }
+    if (iter != this->_memo.begin()) {
+        auto prev_iter = prev(iter);
+        while (iter != this->_memo.end() && prev_iter->first + prev_iter->second.size() >= iter->first) {
+            size_t diff = prev_iter->first + prev_iter->second.size() - iter->first;
+            if (diff < iter->second.size()) {
+                prev_iter->second += iter->second.substr(diff);
+            }
+            this->_memo.erase(iter);
+            iter = next(prev_iter);
+        }
+    }
+    return;
+}
 
 size_t StreamReassembler::unassembled_bytes() const { return this->_unorder_num; }
 
