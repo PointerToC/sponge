@@ -15,7 +15,6 @@ using namespace std;
 ByteStream::ByteStream(const size_t capacity) : total_cap(capacity) { DUMMY_CODE(capacity); }
 
 size_t ByteStream::write(const string &data) {
-    // DUMMY_CODE(data);
     size_t data_len = data.size();
     size_t remain_cap = this->remaining_capacity();
     size_t data_index = 0;
@@ -30,7 +29,6 @@ size_t ByteStream::write(const string &data) {
 
 //! \param[in] len bytes will be copied from the output side of the buffer
 string ByteStream::peek_output(const size_t len) const {
-    // DUMMY_CODE(len);
     std::string res;
     size_t cnt = 0;
     for (auto iter = this->buffer.cbegin(); cnt < len && iter != this->buffer.cend(); ++cnt, ++iter) {
@@ -41,7 +39,6 @@ string ByteStream::peek_output(const size_t len) const {
 
 //! \param[in] len bytes will be removed from the output side of the buffer
 void ByteStream::pop_output(const size_t len) {
-    // DUMMY_CODE(len);
     size_t cnt = len;
     while (cnt > 0 && !this->buffer.empty()) {
         this->buffer.pop_front();
@@ -58,7 +55,6 @@ void ByteStream::pop_output(const size_t len) {
 //! \param[in] len bytes will be popped and returned
 //! \returns a string
 std::string ByteStream::read(const size_t len) {
-    // DUMMY_CODE(len);
     std::string res;
     size_t cnt = 0;
     for (auto iter = this->buffer.cbegin(); iter != this->buffer.cend() && cnt < len; ++iter, ++cnt) {

@@ -19,6 +19,11 @@ class TCPReceiver {
 
     //! The maximum number of bytes we'll store.
     size_t _capacity;
+    WrappingInt32 isn{0};
+    WrappingInt32 ack_num{0};
+    bool syn_signal = false;
+    uint64_t cnt_recv = 0;  // 所接收到的数据流总数
+    bool fin_signal = false;
 
   public:
     //! \brief Construct a TCP receiver
